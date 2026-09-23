@@ -18,6 +18,7 @@ test('HTTP flow serves UI, completes, imports atomically and survives restart', 
     const app = require(modulePath).createApp({ storage: path.join(root, 'private') });
     server = app.server;
     hrPassword ||= app.bootstrapPassword;
+    assert.equal(app.bootstrapPassword, hrPassword, 'Restart must expose the same working HR code to the local launcher');
     server.listen(0, '127.0.0.1');
     await once(server, 'listening');
     const address = `http://127.0.0.1:${server.address().port}`;

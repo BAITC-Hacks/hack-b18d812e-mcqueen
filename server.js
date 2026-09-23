@@ -14,6 +14,7 @@ function createApp(options = {}) {
   fs.mkdirSync(storage, { recursive: true });
   const stateFile = path.join(storage, 'state.json');
   const authFile = path.join(storage, 'auth.json');
+  const hrAccessFile = path.join(storage, 'hr-access.txt');
   const sourceConfig = path.join(__dirname, 'data', 'source.json');
   const source = options.source || process.env.CAREER_QUEST_DATASET || (fs.existsSync(sourceConfig) ? JSON.parse(fs.readFileSync(sourceConfig, 'utf8')).directory : null);
   const demo = () => ({ ...validateDataset(JSON.parse(fs.readFileSync(path.join(__dirname, 'demo.json'), 'utf8'))), _demo: true });
@@ -30,7 +31,17 @@ function createApp(options = {}) {
     bootstrapPassword = crypto.randomBytes(18).toString('base64url');
     accounts.hr = passwordRecord(bootstrapPassword, 'hr', null);
     write(authFile, accounts);
-    fs.writeFileSync(path.join(storage, 'hr-access.txt'), `Login: hr\nPassword: ${bootstrapPassword}\n`, { mode: 0o600 });
+    fs.writeFileSync(hrAccessFile, `Login: hr\nPassword: ${bootstrapPassword}\n`, { mode: 0o600 });
+  } else {
+    // Show the existing code on restart only if it still matches the HR account.
+    let savedPassword;
+    try { savedPassword = /^Password: ([^\r\n]+)\r?$/m.exec(fs.readFileSync(hrAccessFile, 'utf8'))?.[1]; }
+    catch { /* The saved code may be missing; keep the existing account intact. */ }
+    if (savedPassword && savedPassword.length <= 200) {
+      const calculated = crypto.scryptSync(savedPassword, accounts.hr.salt, 32);
+      const stored = Buffer.from(accounts.hr.hash, 'hex');
+      if (stored.length === calculated.length && crypto.timingSafeEqual(calculated, stored)) bootstrapPassword = savedPassword;
+    }
   }
   const sessions = new Map();
   const attempts = new Map();
@@ -149,7 +160,9 @@ if (require.main === module) {
   const app = createApp();
   const port = Number(process.env.PORT || 3000);
   app.server.listen(port, '127.0.0.1', () => {
-    console.log(`Career Quest: http://127.0.0.1:${port}\nЛокальные данные: ${app.storage}\nКод HR: ${path.join(app.storage, 'hr-access.txt')}`);
+    console.log(`Career Quest: http://127.0.0.1:${port}\nЛогин HR: hr`);
+    console.log(app.bootstrapPassword ? `Код HR: ${app.bootstrapPassword}` : 'Код HR: сохранённый код недоступен или не совпадает с аккаунтом. Используйте ранее выданный код.');
+    console.log(`Локальные данные: ${app.storage}\nФайл доступа HR: ${path.join(app.storage, 'hr-access.txt')}`);
   });
 }
 module.exports = { createApp, defaultStorage };
