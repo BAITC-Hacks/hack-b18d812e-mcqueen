@@ -103,8 +103,9 @@ function render() {
     <article class="profile-summary">
       <div class="profile-identity"><div class="avatar" aria-hidden="true">${escape(initials)}</div><div><h2>${escape(e.name)}</h2><p>${escape(e.role || 'Сотрудник')}${e.department ? ` · ${escape(e.department)}` : ''}</p><small>Стаж: ${escape(e.tenure_months ?? '—')} мес.</small></div></div>
       <div class="career-path"><div class="path-step"><small>Сейчас</small><strong>${escape(gradeName(e.grade))}</strong></div><span class="path-arrow" aria-hidden="true">→</span><div class="path-step"><small>${e.target_source === 'career_goal' ? 'Карьерная цель' : 'Следующий грейд'}</small><strong>${escape(targetName(e))}</strong></div></div>
-      <div class="readiness"><div><strong>${coverage(e)}</strong><span>Покрытие требований</span></div><progress aria-label="Покрытие требований" max="100" value="${e.readiness ?? 0}"></progress><small>${e.next_grade ? `${e.gaps.filter(g => !g.gap).length} из ${e.gaps.length} требований выполнено` : 'Обсудите следующую цель с HR'}</small></div>
+      <div class="readiness"><div><strong>${coverage(e)}</strong><span>Покрытие требований</span></div><progress aria-label="Покрытие требований" max="100" value="${e.readiness ?? 0}"></progress><small>${e.next_grade ? `${e.gaps.filter(g => !g.gap).length} из ${e.gaps.length} навыков на нужном уровне` : 'Обсудите следующую цель с HR'}</small></div>
     </article>
+    <article class="practice-progress" aria-label="Прогресс самостоятельной практики"><div><strong>${e.practice?.completed.length || 0}</strong><span>Практических заданий выполнено</span></div><p>Этот счётчик растёт после выполнения практики. Уровни навыков и покрытие требований меняются отдельно — после активности из каталога с приростом навыка.</p><button class="secondary" data-route-panel="history">История практики</button></article>
     ${activeTask(e)}
     ${completedTask(e)}
     <nav class="subnav" aria-label="Разделы маршрута">
@@ -231,7 +232,7 @@ document.addEventListener('submit', async event => {
   try {
     await api('/api/practice/complete', { employee_id: selected, task_id: form.dataset.taskId });
     await refresh();
-    notice('✓ Задание выполнено! Следующие задания уже подобраны.');
+    notice(`✓ Задание выполнено! Всего практических заданий: ${state.employees.find(e => e.id === selected).practice.completed.length}. Уровни навыков автоматически не повышаются.`);
   } catch (error) { notice(error.message, true); button.disabled = false; }
 });
 $('import-button').onclick = async () => {

@@ -364,6 +364,13 @@ textarea:focus-visible { outline: 3px solid #95af55; outline-offset: 3px; }
 .completed-task h3 { margin: 8px 0; }
 .completed-task p { margin-bottom: 0; }
 .completed-task button { flex-shrink: 0; }
+.practice-progress { display: flex; align-items: center; gap: 24px; margin-top: 16px; padding: 16px 20px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.practice-progress > div { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.practice-progress strong { font-size: 28px; color: #285426; }
+.practice-progress span { max-width: 170px; font-size: 13px; font-weight: 600; }
+.practice-progress p { flex: 1; margin: 0; font-size: 12px; color: var(--muted); line-height: 1.6; }
+.practice-progress button { flex-shrink: 0; }
+@media (max-width: 760px) { .practice-progress { flex-wrap: wrap; gap: 12px; } .practice-progress p { flex-basis: 100%; } .practice-progress button { width: 100%; } }
 @media (max-width: 600px) { .completed-task { flex-wrap: wrap; } .completed-task button { width: 100%; } }
 @media (max-width: 760px) {
   .task-filter { width: 100%; }
