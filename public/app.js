@@ -51,6 +51,14 @@ function recommendationCard(r, index) {
     <button data-complete="${escape(r.activity.id)}">Отметить завершение</button>
   </article>`;
 }
+function developmentSection(employee) {
+  const plan = employee.development;
+  if (!plan || plan.stage === 'in_progress') return '';
+  const titles = { almost_complete: 'Следующая цель уже рядом', completed: 'Цель выполнена — продолжаем расти', no_target: 'Новые направления развития' };
+  return `<section class="development-plan" aria-label="Дальнейшее развитие"><div class="section-heading"><div><p class="eyebrow">ДАЛЬНЕЙШЕЕ РАЗВИТИЕ</p><h2>${titles[plan.stage] || 'Следующие цели'}</h2><p class="muted">${escape(plan.message)}</p></div><span class="tag">Новых целей: ${plan.goals.length}</span></div>
+    ${plan.completed_goals?.length ? `<p class="muted">Требования уже выполнены: ${plan.completed_goals.map(g => escape(g.label || g.name)).join(', ')}.</p>` : ''}
+    <div class="growth-goals">${plan.goals.map((goal, i) => `<article class="growth-goal"><div class="section-heading"><div><span class="rank">${goal.type === 'grade' ? 'КАРЬЕРНЫЙ ОРИЕНТИР' : 'РАЗВИТИЕ НАВЫКА'}</span><h3>${escape(goal.label || goal.name)}</h3></div><span class="tag">${goal.readiness == null ? '—' : goal.readiness + '%'} требований</span></div><p>${escape(goal.reason)}</p><div class="growth-gaps">${goal.gaps.filter(g => g.gap).map(g => `<span>${escape(g.name)}: ${g.current} → ${g.required}${g.critical ? ' ★' : ''}</span>`).join('')}</div><details ${plan.stage !== 'almost_complete' && i === 0 ? 'open' : ''}><summary>Активности для новой цели (${goal.recommendations.length})</summary><div class="recommendations">${goal.recommendations.map(recommendationCard).join('')}</div>${goal.recommendations.length ? '' : '<p class="muted">Пока нет доступных активностей. Обсудите подходящий следующий шаг с HR.</p>'}</details></article>`).join('') || `<article class="panel"><p>Подходящих новых целей в текущем каталоге пока нет. HR может добавить активности или согласовать новую траекторию.</p></article>`}</div><p class="muted">Новые цели предлагаются при выполнении от ${plan.threshold}% текущей цели или при отсутствии следующего грейда. Фактический грейд меняется только по решению компании.</p></section>`;
+}
 function render() {
   const e = state.employees.find(employee => employee.id === selected);
   const ready = e.gaps.length > 0 && e.gaps.every(g => g.gap === 0);
@@ -70,9 +78,10 @@ function render() {
       <button data-route-panel="history" aria-controls="route-history" aria-pressed="false">История <span class="tab-count">${e.history.length}</span></button>
     </nav>
     <div id="route-recommendations" class="panel-body">
-      <div class="section-heading"><div><h2>С чего начать</h2><p class="muted">Шаги к вашей цели с учётом навыков и истории участия.</p></div><span class="tag">${e.recommendations.length} из 3 возможных</span></div>
+      <div class="section-heading"><div><h2>${ready ? 'Текущая цель выполнена' : 'С чего начать'}</h2><p class="muted">Шаги к вашей цели с учётом навыков и истории участия.</p></div><span class="tag">${ready ? 'Выполнена' : e.recommendations.length + ' из 3 возможных'}</span></div>
       <div class="recommendations">${e.recommendations.length ? e.recommendations.map(recommendationCard).join('') : `<article class="empty"><h3>${ready ? 'Требования выполнены' : 'Пока нет подходящего шага'}</h3><p>${!e.next_grade ? 'В наборе не задана следующая цель. Обсудите её с HR.' : ready ? 'Обсудите дальнейшее развитие и возможность повышения с HR.' : 'HR может дополнить каталог или проверить входные требования активностей.'}</p></article>`}</div>
       <p class="muted">Завершение активности обновляет навыки и рекомендации. Покрытие требований не означает автоматическое повышение.</p>
+      ${developmentSection(e)}
     </div>
     <div id="route-skills" class="panel-body" hidden>
       <div class="skills-layout">

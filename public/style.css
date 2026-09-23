@@ -330,3 +330,12 @@ footer { max-width: 1288px; margin: auto; padding: 28px 32px 30px; font-size: 11
   #login-panel { margin: 25px auto 35px; padding: 24px; }
   footer { padding: 24px 16px; }
 }
+.development-plan { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--line); }
+.growth-goals { display: grid; gap: 16px; }
+.growth-goal { background: #f0f5e7; border: 1px solid #d6e1c4; border-radius: 14px; padding: 24px; }
+.growth-goal h3 { margin-top: 8px; }
+.growth-goal > p { font-size: 14px; line-height: 1.6; }
+.growth-goal summary { cursor: pointer; font-weight: 600; padding: 14px 0; }
+.growth-gaps { display: flex; flex-wrap: wrap; gap: 8px; }
+.growth-gaps span { font-size: 12px; padding: 6px 10px; background: white; border-radius: 8px; }
+@media (max-width: 480px) { .growth-goal { padding: 17px; } }
