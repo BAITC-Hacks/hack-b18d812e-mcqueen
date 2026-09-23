@@ -104,6 +104,8 @@ function createApp(options = {}) {
         if (input.mode === 'profiles') next = mergeProfiles(state, input);
         else if (input.events && input.skills && input.employees) next = normalize(input);
         else next = validateDataset(input);
+        // Reject datasets that cannot produce a view before replacing saved state.
+        dashboard(next);
         next._demo = false; save(next);
         // Imports may replace identities; revoke all employee sessions and credentials.
         accounts = { hr: accounts.hr }; write(authFile, accounts);

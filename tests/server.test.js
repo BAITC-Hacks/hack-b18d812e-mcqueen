@@ -46,6 +46,11 @@ test('HTTP flow serves UI, completes, imports atomically and survives restart', 
     assert.equal((await post('/api/complete', { employee_id: 'demo-1', activity_id: 'python-lab' })).status, 200);
     assert.equal((await post('/api/complete', { employee_id: 'demo-1', activity_id: 'python-lab' })).status, 400);
     assert.equal((await post('/api/import', { employees: [] })).status, 400);
+    const brokenSchedule = JSON.parse(fs.readFileSync(path.join(root, 'demo.json'), 'utf8'));
+    brokenSchedule.activities[0].format = 'offline';
+    assert.equal((await post('/api/import', brokenSchedule)).status, 400);
+    const stillValid = await (await fetch(base + '/api/state', { headers: { Cookie: hrCookie } })).json();
+    assert.equal(stillValid.employees[0].skills.python, 3);
     await stop();
     base = await start();
     state = await (await fetch(base + '/api/state', {headers:{Cookie:hrCookie}})).json();
@@ -53,7 +58,12 @@ test('HTTP flow serves UI, completes, imports atomically and survives restart', 
     assert.equal(state.employees[0].history.length, 1);
     const imported = JSON.parse(fs.readFileSync(path.join(root, 'demo.json'), 'utf8'));
     imported.employees[0].name = 'Проверочный профиль';
+    const preImportAccess = await (await post('/api/access', { employee_id: 'demo-1' })).json();
+    const preImportLogin = await fetch(base + '/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(preImportAccess) });
+    const preImportCookie = preImportLogin.headers.get('set-cookie').split(';')[0];
+    assert.equal((await fetch(base + '/api/state', { headers: { Cookie: preImportCookie } })).status, 200);
     assert.equal((await post('/api/import', imported)).status, 200);
+    assert.equal((await fetch(base + '/api/state', { headers: { Cookie: preImportCookie } })).status, 401);
     state = await (await fetch(base + '/api/state', {headers:{Cookie:hrCookie}})).json();
     assert.equal(state.demo, false);
     assert.equal(state.employees[0].name, 'Проверочный профиль');
@@ -61,6 +71,12 @@ test('HTTP flow serves UI, completes, imports atomically and survives restart', 
     state = await (await fetch(base + '/api/state', {headers:{Cookie:hrCookie}})).json();
     assert.equal(state.demo, true);
     assert.equal(state.employees[0].history.length, 0);
+    const rotatedAccess = await (await post('/api/access', { employee_id: 'demo-1' })).json();
+    const renewedLogin = await fetch(base + '/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rotatedAccess) });
+    const rotatedCookie = renewedLogin.headers.get('set-cookie').split(';')[0];
+    assert.equal((await post('/api/access', { employee_id: 'demo-1' })).status, 200);
+    assert.equal((await fetch(base + '/api/state', { headers: { Cookie: rotatedCookie } })).status, 401);
+    assert.equal((await fetch(base + '/api/reset', { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: hrCookie, Origin: 'https://untrusted.example' }, body: '{}' })).status, 403);
   } finally {
     if (server?.listening) await stop();
     // mkdtemp creates this exact isolated directory under the OS temp folder.

@@ -8,18 +8,72 @@
   <script src="/app.js" defer></script>
 </head>
 <body>
-  <header><a class="brand" href="/">CQ<span>Career Quest</span></a><span class="local">Локальное рабочее пространство</span></header>
+  <header class="site-header">
+    <a class="brand" href="/"><span class="brand-mark">CQ</span><span>Career Quest</span></a>
+    <span class="local">Пространство развития</span>
+  </header>
   <main>
-    <div class="intro"><div><p class="eyebrow">РАЗВИТИЕ С ПОНЯТНЫМ МАРШРУТОМ</p><h1>Следующий грейд.<br>Конкретный шаг.</h1><p>Навыки, которые стоит усилить, и активности, которые помогут это сделать.</p></div><div class="badge">↗<small>Расти осознанно</small></div></div>
-    <p id="notice" role="status" aria-live="polite"></p><article id="login-panel"><h2>Вход в Career Quest</h2><p>HR получает код в локальном файле hr-access.txt, путь указан в терминале. Сотруднику код выдаёт HR.</p><form id="login-form"><label for="login-name">Логин</label><input id="login-name" autocomplete="username" required><label for="login-password">Код доступа</label><input id="login-password" type="password" autocomplete="current-password" required><button>Войти</button></form></article>
+    <div class="intro">
+      <div><p class="eyebrow">КАРЬЕРА С ПОНЯТНЫМ МАРШРУТОМ</p><h1>Ваш следующий шаг</h1><p>От текущих навыков — к новой цели.</p></div>
+    </div>
+    <p id="notice" role="status" aria-live="polite"></p>
+    <article id="login-panel">
+      <h2>Добро пожаловать</h2><p class="muted">Войдите, чтобы открыть свой маршрут развития. Код доступа сотруднику выдаёт HR.</p>
+      <form id="login-form">
+        <label for="login-name">Логин</label><input id="login-name" autocomplete="username" required>
+        <label for="login-password">Код доступа</label><input id="login-password" type="password" autocomplete="current-password" required>
+        <button>Войти</button>
+      </form>
+      <details class="compact-details"><summary>Первый вход для HR</summary><p class="muted">Код находится в локальном файле hr-access.txt. Путь к нему указан в терминале при запуске.</p></details>
+    </article>
     <div id="workspace" hidden>
-    <nav aria-label="Разделы"><button id="employee-tab" aria-pressed="true">Мой маршрут</button><button id="hr-tab" aria-pressed="false">HR · Обзор команды</button><button id="logout-button" class="secondary">Выйти</button></nav>
-
-    <div id="mode"></div>
-    <section id="employee-view"><label class="select-label" for="employee-select">Профиль сотрудника</label><select id="employee-select"></select><button id="access-button" class="secondary" hidden>Выдать новый код сотруднику</button><p id="access-result" role="status"></p><div id="route"></div></section>
-    <section id="hr-view" hidden><div id="hr"></div><article class="import"><h2>Импорт стартового набора и проверочных профилей</h2><label for="import-mode">Режим</label><select id="import-mode"><option value="profiles">Добавить / заменить профили и их историю</option><option value="full">Заменить весь набор</option></select><p>Для профилей выберите employees.json и activity_history.csv. Для полного набора добавьте skills.json и events.json. Схема — из стартового кита. До 8 МБ суммарно.</p><input id="import-file" type="file" multiple accept=".json,.csv"><button id="import-button">Проверить и импортировать</button><button id="reset-button" class="secondary">Восстановить исходный набор</button><p class="muted">Профили с совпадающим employee_id заменяются вместе с их историей. После импорта коды доступа сотрудников нужно выдать заново.</p></article></section>
+      <nav class="workspace-nav" aria-label="Разделы">
+        <button id="employee-tab" aria-pressed="true" aria-controls="employee-view">Мой маршрут</button>
+        <button id="hr-tab" aria-pressed="false" aria-controls="hr-view">HR · Обзор команды</button>
+        <button id="logout-button" class="secondary">Выйти</button>
+      </nav>
+      <div id="mode"></div>
+      <section id="employee-view" aria-label="Маршрут сотрудника">
+        <div class="profile-toolbar">
+          <div class="profile-picker"><label class="select-label" for="employee-select">Профиль сотрудника</label><select id="employee-select"></select></div>
+          <button id="access-button" class="secondary" hidden>Выдать код доступа</button>
+        </div>
+        <p id="access-result" role="status"></p>
+        <div id="route"></div>
+      </section>
+      <section id="hr-view" aria-label="Обзор команды" hidden>
+        <div class="page-heading"><h2>Развитие команды</h2><p class="muted">Где нужна поддержка и какие навыки стоит усилить.</p></div>
+        <nav class="subnav" aria-label="Разделы HR">
+          <button data-hr-panel="overview" aria-pressed="true" aria-controls="hr-overview">Обзор</button>
+          <button data-hr-panel="employees" aria-pressed="false" aria-controls="hr-employees">Сотрудники</button>
+          <button data-hr-panel="data" aria-pressed="false" aria-controls="hr-data">Данные и импорт</button>
+        </nav>
+        <div id="hr-overview" class="panel-body"><div id="hr"></div></div>
+        <div id="hr-employees" class="panel-body" hidden>
+          <article class="panel">
+            <div class="table-tools"><div><h3>Сотрудники</h3><p class="muted">По алфавиту. Откройте профиль, чтобы посмотреть маршрут.</p></div><div><label for="team-search">Поиск по имени, роли или отделу</label><input id="team-search" type="search" placeholder="Найти сотрудника…" autocomplete="off"></div></div>
+            <div id="team-table"></div>
+          </article>
+        </div>
+        <div id="hr-data" class="panel-body" hidden>
+          <div class="data-layout">
+            <article class="import">
+              <h3>Импорт профилей</h3><p class="muted">Добавьте проверочные профили или обновите весь набор данных.</p>
+              <label for="import-mode">Что загрузить</label><select id="import-mode"><option value="profiles">Профили и их история</option><option value="full">Весь набор данных</option></select>
+              <p>Выберите employees.json и activity_history.csv. Для полного набора также нужны skills.json и events.json.</p>
+              <label for="import-file">Файлы · до 8 МБ суммарно</label><input id="import-file" type="file" multiple accept=".json,.csv">
+              <div class="form-actions"><button id="import-button">Проверить и импортировать</button></div>
+              <p class="muted">Совпадающие профили заменяются вместе с историей. После импорта сотрудникам нужно выдать новые коды доступа.</p>
+            </article>
+            <div>
+              <article class="panel"><h3>О текущем наборе</h3><div id="data-notes" class="info-list"></div></article>
+              <article class="panel"><h3>Восстановление</h3><p class="muted">Вернуть исходные данные. Текущий прогресс и коды доступа сотрудников будут сброшены.</p><button id="reset-button" class="secondary">Восстановить исходный набор</button></article>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   </main>
-  <footer>Career Quest · Hackathon MVP · Без внешних сервисов</footer>
+  <footer>Career Quest · Развитие в вашем темпе</footer>
 </body>
 </html>

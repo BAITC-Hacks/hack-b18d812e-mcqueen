@@ -51,3 +51,97 @@ test('ranking counts only the gap and ignores exhausted activity caps', () => {
   assert.equal(recs[0].activity.id, 'sql-lab');
   assert.equal(recs[0].impact, 1);
 });
+test('legacy import also enforces the dataset skill scale and valid goals', () => {
+  const data = fixture();
+  data.employees[0].skills.python = 6;
+  assert.throws(() => validateDataset(data), /0–5/);
+  data.employees[0].skills.python = 1;
+  data.employees[0].career_goal = { target_role: 'Missing', target_grade: 'Middle' };
+  assert.throws(() => validateDataset(data), /карьерная цель/);
+  assert.equal(dashboard(fixture())[2].readiness, null);
+});
+
+const careerFixture = () => {
+  const data = fixture();
+  for (const grade of data.grades) grade.role = 'Аналитик';
+  data.grades.find(g => g.id === 'senior').next_grade = 'analyst-lead';
+  data.grades.push(
+    { id: 'analyst-lead', name: 'Lead', role: 'Аналитик', next_grade: null, requirements: { python: 5, sql: 5, communication: 5 } },
+    { id: 'developer-middle', name: 'Middle', role: 'Разработчик', next_grade: null, requirements: { python: 4, sql: 2, communication: 3 }, critical_skills: ['python'] }
+  );
+  for (const employee of data.employees) employee.role = 'Аналитик';
+  return data;
+};
+
+test('same-role career goal determines requirements instead of the immediate next grade', () => {
+  const data = careerFixture();
+  data.employees[0].career_goal = { target_role: 'Аналитик', target_grade: 'Senior' };
+  const view = dashboard(validateDataset(data))[0];
+  assert.equal(view.target_source, 'career_goal');
+  assert.equal(view.next_grade.id, 'senior');
+  assert.equal(view.gaps.find(g => g.skill === 'python').required, 5);
+  assert.equal(view.gaps.find(g => g.skill === 'communication').required, 4);
+  assert.equal(view.readiness, 23);
+  assert.ok(view.recommendations.length > 0);
+  for (const recommendation of view.recommendations) assert.match(recommendation.explanation, /Карьерная цель: Аналитик — Senior/);
+});
+
+test('Lead may target a different role while eligibility uses the current role, grade and prerequisites', () => {
+  const data = careerFixture();
+  const employee = data.employees[0];
+  employee.grade = 'analyst-lead';
+  employee.career_goal = { target_role: 'Разработчик', target_grade: 'Middle' };
+  const python = data.activities.find(a => a.id === 'python-lab');
+  python.target_roles = ['Аналитик'];
+  python.target_grades = ['Lead'];
+  data.activities.find(a => a.id === 'sql-lab').target_roles = ['Разработчик'];
+  data.activities.find(a => a.id === 'team-demo').target_grades = ['Middle'];
+  const view = dashboard(validateDataset(data))[0];
+  assert.equal(view.target_source, 'career_goal');
+  assert.equal(view.next_grade.id, 'developer-middle');
+  assert.equal(view.gaps.find(g => g.skill === 'python').required, 4);
+  assert.equal(view.gaps.find(g => g.skill === 'python').critical, true);
+  assert.deepEqual(view.recommendations.map(r => r.activity.id), ['python-lab']);
+  assert.equal(view.recommendations[0].impact, 4);
+  assert.match(view.recommendations[0].explanation, /Карьерная цель: Разработчик — Middle/);
+  assert.throws(() => completeActivity(data, employee.id, 'sql-lab'), /входные требования/);
+  assert.throws(() => completeActivity(data, employee.id, 'team-demo'), /входные требования/);
+  assert.throws(() => completeActivity(data, employee.id, 'project'), /входные требования/);
+});
+
+test('absent or null career goal follows next grade and terminal grade has no target', () => {
+  const data = careerFixture();
+  data.employees[1].career_goal = null;
+  data.employees[2].grade = 'analyst-lead';
+  const views = dashboard(validateDataset(data));
+  assert.equal(views[0].target_source, 'next_grade');
+  assert.equal(views[0].next_grade.id, 'middle');
+  assert.equal(views[1].target_source, 'next_grade');
+  assert.equal(views[1].next_grade.id, 'senior');
+  assert.equal(views[2].target_source, 'not_set');
+  assert.equal(views[2].next_grade, null);
+  assert.deepEqual(views[2].gaps, []);
+  assert.deepEqual(views[2].recommendations, []);
+});
+
+test('unresolved explicit career goal is not silently replaced with another target', () => {
+  const data = careerFixture();
+  data.employees[0].career_goal = { target_role: 'Неизвестная роль', target_grade: 'Middle' };
+  const view = dashboard(data)[0];
+  assert.equal(view.next_grade, null);
+  assert.equal(view.target_source, 'not_set');
+  assert.deepEqual(view.recommendations, []);
+});
+
+test('in-progress activities cannot be recommended or completed as a new record, including repeatable activities', () => {
+  for (const repeatable of [false, true]) {
+    const data = fixture();
+    data.activities.find(a => a.id === 'python-lab').repeatable = repeatable;
+    const employee = data.employees[0];
+    employee.history.push({ activity_id: 'python-lab', completed_at: '2026-09-01T10:00:00Z', status: 'in_progress' });
+    assert.ok(!recommend(data, employee).some(r => r.activity.id === 'python-lab'));
+    const before = structuredClone(employee);
+    assert.throws(() => completeActivity(data, employee.id, 'python-lab'), /находится в процессе/);
+    assert.deepEqual(employee, before);
+  }
+});

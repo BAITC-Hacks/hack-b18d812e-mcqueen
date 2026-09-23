@@ -66,3 +66,27 @@ test('CSV handles quoted commas, CRLF and malformed headers', () => {
   assert.equal(rows[0].note, 'a,b');
   assert.throws(() => csv('not,history\n1,2'), /столбцы/);
 });
+test('import credits recurring club once per day and preserves audit history', () => {
+  const raw = fixture();
+  raw.events.events.push({ ...raw.events.events[0], event_id: 'EV_036', develops_skills: [{ skill_id: 'design', gain: 1, max_level: 5 }] });
+  const completion = { employee_id: 'example', event_id: 'EV_036', date: '2026-09-10', status: 'completed', completion_pct: 100 };
+  raw.history = [{ ...completion, record_id: 'club-a' }, { ...completion, record_id: 'club-b' }];
+  const once = normalize(raw);
+  assert.equal(once.employees[0].skills.design, 3);
+  assert.equal(once.employees[0].history.length, 2);
+  assert.equal(once.warnings.length, 1);
+  raw.history.push({ ...completion, record_id: 'club-c', date: '2026-09-11' });
+  const twice = normalize(raw);
+  assert.equal(twice.employees[0].skills.design, 4);
+  const reimported = mergeProfiles(twice, { employees: raw.employees, history: raw.history });
+  assert.equal(reimported.employees[0].skills.design, 4);
+});
+test('career goals must reference a valid role profile; absent goals remain valid', () => {
+  const raw = fixture();
+  raw.employees.employees[0].career_goal = { target_role: 'Engineer', target_grade: 'Senior' };
+  assert.equal(normalize(raw).employees[0].career_goal.target_grade, 'Senior');
+  raw.employees.employees[0].career_goal.target_role = 'Missing';
+  assert.throws(() => normalize(raw), /Карьерная цель/);
+  raw.employees.employees[0].career_goal = null;
+  assert.doesNotThrow(() => normalize(raw));
+});

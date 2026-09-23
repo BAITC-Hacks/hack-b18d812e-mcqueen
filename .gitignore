@@ -2,4 +2,20 @@ node_modules/
 data/
 *.log
 .env
+.env.*
+!.env.example
+!.env.sample
+# Local accounts, passwords, state and private key files must not be published.
+auth.json
+hr-access.txt
+state.json
+state.json.tmp
+auth.json.tmp
+*.pem
+*.key
+*.p12
+*.pfx
+.runtime/
+__pycache__/
+*.pyc
 coverage/
