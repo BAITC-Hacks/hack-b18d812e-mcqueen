@@ -1,0 +1,23 @@
+{
+  "skills": [
+    { "id": "python", "name": "Python" },
+    { "id": "sql", "name": "SQL" },
+    { "id": "communication", "name": "Коммуникация" }
+  ],
+  "grades": [
+    { "id": "junior", "name": "Junior", "next_grade": "middle", "requirements": { "python": 1, "sql": 1 } },
+    { "id": "middle", "name": "Middle", "next_grade": "senior", "requirements": { "python": 3, "sql": 3, "communication": 2 } },
+    { "id": "senior", "name": "Senior", "next_grade": null, "requirements": { "python": 5, "sql": 4, "communication": 4 } }
+  ],
+  "activities": [
+    { "id": "python-lab", "name": "Практикум Python", "description": "Решить учебную задачу и пройти разбор с наставником.", "effects": [{ "skill": "python", "gain": 2, "max_level": 3 }] },
+    { "id": "sql-lab", "name": "SQL: от запроса к решению", "description": "Практика запросов на синтетическом наборе данных.", "effects": [{ "skill": "sql", "gain": 2, "max_level": 4 }] },
+    { "id": "team-demo", "name": "Демо для команды", "description": "Подготовить короткую презентацию и получить обратную связь.", "effects": [{ "skill": "communication", "gain": 1, "max_level": 4 }] },
+    { "id": "project", "name": "Проект с наставником", "description": "Спроектировать решение и объяснить технические решения команде.", "prerequisites": { "python": 2 }, "effects": [{ "skill": "python", "gain": 2, "max_level": 5 }, { "skill": "communication", "gain": 1, "max_level": 3 }] }
+  ],
+  "employees": [
+    { "id": "demo-1", "name": "Демо: Алия", "grade": "junior", "skills": { "python": 1, "sql": 1, "communication": 1 }, "history": [] },
+    { "id": "demo-2", "name": "Демо: Тимур", "grade": "middle", "skills": { "python": 3, "sql": 3, "communication": 2 }, "history": [{ "activity_id": "python-lab", "completed_at": "2026-09-01T10:00:00Z" }] },
+    { "id": "demo-3", "name": "Демо: Дана", "grade": "senior", "skills": { "python": 5, "sql": 4, "communication": 4 }, "history": [] }
+  ]
+}

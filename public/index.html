@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Career Quest — следующий шаг</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header><a class="brand" href="/">CQ<span>Career Quest</span></a><span class="local">Локальное рабочее пространство</span></header>
+  <main>
+    <div class="intro"><div><p class="eyebrow">РАЗВИТИЕ С ПОНЯТНЫМ МАРШРУТОМ</p><h1>Следующий грейд.<br>Конкретный шаг.</h1><p>Навыки, которые стоит усилить, и активности, которые помогут это сделать.</p></div><div class="badge">↗<small>Расти осознанно</small></div></div>
+    <nav aria-label="Разделы"><button id="employee-tab" aria-pressed="true">Мой маршрут</button><button id="hr-tab" aria-pressed="false">HR · Обзор команды</button></nav>
+    <p id="notice" role="status" aria-live="polite"></p>
+    <div id="mode"></div>
+    <section id="employee-view"><label class="select-label" for="employee-select">Профиль сотрудника</label><select id="employee-select"></select><div id="route"></div></section>
+    <section id="hr-view" hidden><div id="hr"></div><article class="import"><h2>Импорт проверочных профилей</h2><p>JSON заменяет текущий набор: навыки, грейды, активности и сотрудники. Данные сохраняются только на этом компьютере.</p><label for="import-file">Файл JSON, до 2 МБ</label><input id="import-file" type="file" accept=".json,application/json"><button id="import-button">Проверить и импортировать</button><button id="reset-button" class="secondary">Вернуть демо</button><p class="muted">Используйте структуру demo.json из репозитория. Демо содержит только вымышленные профили.</p></article></section>
+  </main>
+  <footer>Career Quest · Hackathon MVP · Без внешних сервисов</footer>
+</body>
+</html>
