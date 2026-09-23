@@ -7,9 +7,9 @@ test('valid demo recommendations explain actual gap coverage and exclude prerequ
   const data = validateDataset(fixture());
   const list = recommend(data, data.employees[0]);
   assert.equal(list.length, 3);
-  assert.equal(list[0].score, 2);
+  assert.equal(list[0].impact, 2);
   assert.ok(!list.some(r => r.activity.id === 'project'));
-  for (const rec of list) assert.equal(rec.score, rec.reasons.reduce((sum, r) => sum + r.covered, 0));
+  for (const rec of list) assert.equal(rec.impact, rec.reasons.reduce((sum, r) => sum + r.covered, 0));
 });
 test('completion caps skills, records history and cannot be repeated', () => {
   const data = fixture();
@@ -49,5 +49,5 @@ test('ranking counts only the gap and ignores exhausted activity caps', () => {
   const recs = recommend(data, data.employees[0]);
   assert.equal(recs.length, 1);
   assert.equal(recs[0].activity.id, 'sql-lab');
-  assert.equal(recs[0].score, 1);
+  assert.equal(recs[0].impact, 1);
 });
