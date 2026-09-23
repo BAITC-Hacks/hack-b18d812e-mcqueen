@@ -358,6 +358,13 @@ textarea:focus-visible { outline: 3px solid #95af55; outline-offset: 3px; }
 .practice-card { border-style: dashed; }
 .practice-history { margin-top: 20px; }
 .reflection { white-space: pre-wrap; overflow-wrap: anywhere; }
+.completed-task { display: flex; align-items: center; gap: 16px; margin-top: 20px; padding: 20px; background: #f0f7ee; border: 1px solid #bad4b1; border-radius: 14px; }
+.completion-check { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; background: #d9edcf; color: #285426; border-radius: 50%; font-size: 24px; }
+.completed-task > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.completed-task h3 { margin: 8px 0; }
+.completed-task p { margin-bottom: 0; }
+.completed-task button { flex-shrink: 0; }
+@media (max-width: 600px) { .completed-task { flex-wrap: wrap; } .completed-task button { width: 100%; } }
 @media (max-width: 760px) {
   .task-filter { width: 100%; }
   #route-choices > .section-heading { flex-direction: column; align-items: stretch; }

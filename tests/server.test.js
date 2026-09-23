@@ -97,10 +97,10 @@ test('HTTP flow serves UI, completes, imports atomically and survives restart', 
     const task = profile.practice.tasks[0];
     const levels = structuredClone(profile.skills);
     assert.equal((await employeePost('/api/plan', { employee_id: 'demo-1', source: 'practice', task_id: task.id })).status, 200);
-    assert.equal((await employeePost('/api/practice/complete', { employee_id: 'demo-1', task_id: task.id, reflection: 'малo' })).status, 400);
+    assert.equal((await employeePost('/api/practice/complete', { employee_id: 'demo-1', task_id: task.id, reflection: {} })).status, 400);
     assert.equal((await view()).selected_task.task_id, task.id);
-    assert.equal((await employeePost('/api/practice/complete', { employee_id: 'demo-1', task_id: task.id, reflection: 'Подготовлен учебный пример и проверены его ограничения.' })).status, 200);
-    assert.equal((await employeePost('/api/practice/complete', { employee_id: 'demo-1', task_id: task.id, reflection: 'Подготовлен учебный пример и проверены его ограничения.' })).status, 400);
+    assert.equal((await employeePost('/api/practice/complete', { employee_id: 'demo-1', task_id: task.id })).status, 200);
+    assert.equal((await employeePost('/api/practice/complete', { employee_id: 'demo-1', task_id: task.id })).status, 400);
     profile = await view();
     assert.deepEqual(profile.skills, levels);
     assert.equal(profile.practice.completed.length, 1);

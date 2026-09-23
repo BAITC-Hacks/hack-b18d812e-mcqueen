@@ -42,24 +42,25 @@ test('catalog completion automatically replenishes the route; practice preserves
   const skills = structuredClone(employee.skills);
   const history = structuredClone(employee.history);
   const readiness = employee.readiness;
-  completePractice(data, own(data), first.id, reflection);
+  completePractice(data, own(data), first.id);
   employee = own(data);
   assert.equal(employee.selected_task, null);
   assert.deepEqual(employee.skills, skills);
   assert.deepEqual(employee.history, history);
   assert.equal(employee.readiness, readiness);
   assert.equal(employee.practice.completed.length, 1);
+  assert.equal(employee.practice.completed[0].reflection, '');
   assert.ok(!employee.practice.tasks.some(t => t.id === first.id));
   assert.ok(employee.practice.tasks.some(t => t.skill === first.skill && t.phase === 2));
   assert.throws(() => completePractice(data, employee, first.id, reflection), /уже/);
 });
 
-test('practice exhausts meaningful stages and rejects fabricated, outdated and empty submissions', () => {
+test('practice exhausts meaningful stages and rejects fabricated, outdated and invalid submissions', () => {
   const data = fixture();
   data.activities = [];
   data.employees[0].skills = { python: 2, sql: 3, communication: 2 };
   const first = own(data).practice.tasks[0];
-  assert.throws(() => completePractice(data, own(data), first.id, 'готово'), /20 до 2000/);
+  assert.throws(() => completePractice(data, own(data), first.id, {}), /строкой/);
   assert.throws(() => completePractice(data, own(data), 'fake', reflection), /не актуально/);
   assert.throws(() => completePractice(data, dashboard(data)[1], first.id, reflection), /не актуально/);
   for (let phase = 1; phase <= 3; phase++) {

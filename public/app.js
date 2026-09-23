@@ -75,12 +75,21 @@ function activeTask(e) {
   const practice = choice.source === 'practice';
   const task = practice ? e.practice.available_tasks.find(t => t.id === choice.task_id) : e.available_activities.find(r => r.activity.id === choice.task_id);
   if (!task) return '';
-  return `<article class="active-task panel"><div class="section-heading"><div><p class="eyebrow">ВАШ ВЫБОР</p><h3>${escape(practice ? task.title : task.activity.name)}</h3></div><button class="secondary" data-clear-task>Убрать из плана</button></div>${practice ? `<ol class="task-steps">${task.steps.map(step => `<li>${escape(step)}</li>`).join('')}</ol><details class="compact-details"><summary>Как проверить результат</summary><ul>${task.checks.map(check => `<li>${escape(check)}</li>`).join('')}</ul></details><form id="practice-form" data-task-id="${escape(task.id)}"><label for="practice-result">Что получилось и как вы это проверили?</label><textarea id="practice-result" name="reflection" required minlength="20" maxlength="2000" rows="3" placeholder="Кратко опишите результат, проверку и оставшиеся вопросы…"></textarea><p class="muted">От 20 до 2000 символов. Самооценка сохраняется в истории практики; подтверждённый уровень навыка не меняется.</p><button>Сохранить результат практики</button></form>` : `<p>${escape(task.activity.description || '')}</p><p class="muted">${task.reasons.map(r => `${escape(r.name)}: ${r.before} → ${r.after}`).join(' · ')}</p><button data-complete="${escape(task.activity.id)}">Отметить завершение</button>`}</article>`;
+  return `<article class="active-task panel"><div class="section-heading"><div><p class="eyebrow">ВАШ ВЫБОР</p><h3>${escape(practice ? task.title : task.activity.name)}</h3></div><button class="secondary" data-clear-task>Убрать из плана</button></div>${practice ? `<ol class="task-steps">${task.steps.map(step => `<li>${escape(step)}</li>`).join('')}</ol><details class="compact-details"><summary>Как проверить результат</summary><ul>${task.checks.map(check => `<li>${escape(check)}</li>`).join('')}</ul></details><form id="practice-form" data-task-id="${escape(task.id)}"><p class="muted">Отметьте выполнение одним нажатием. Практика сохранится в истории; подтверждённый уровень навыка не меняется.</p><button>Отметить выполненным</button></form>` : `<p>${escape(task.activity.description || '')}</p><p class="muted">${task.reasons.map(r => `${escape(r.name)}: ${r.before} → ${r.after}`).join(' · ')}</p><button data-complete="${escape(task.activity.id)}">Отметить завершение</button>`}</article>`;
 }
 function renderChoices(e) {
   const catalog = (e.available_activities || e.recommendations).filter(r => !taskSkill || r.reasons.some(reason => reason.skill === taskSkill));
   const practice = (e.practice?.available_tasks || []).filter(task => !taskSkill || task.skill === taskSkill);
   $('choice-results').innerHTML = `<p class="muted" role="status">Из каталога: ${catalog.length} · Самостоятельная практика: ${practice.length}</p><div class="recommendations">${catalog.map(recommendationCard).join('')}${practice.map(practiceCard).join('') || ''}${!catalog.length && !practice.length ? '<article class="empty"><h3>Пока нет доступных задач</h3><p>Выберите другой навык или обсудите цель и каталог активностей с HR.</p></article>' : ''}</div>`;
+}
+function completedTask(e) {
+  const items = [
+    ...e.history.filter(h => (!h.status || h.status === 'completed') && h.recorded_at).map(h => ({ title: state.activities.find(a => a.id === h.activity_id)?.name || h.activity_id, date: h.recorded_at })),
+    ...(e.practice?.completed || []).map(item => ({ title: item.task.title, date: item.completed_at, practice: true }))
+  ].sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
+  if (!items.length) return '';
+  const last = items[0];
+  return `<article class="completed-task"><span class="completion-check" aria-hidden="true">✓</span><div><span class="status completed">Выполнено</span><h3>${escape(last.title)}</h3><p class="muted">${dateLabel(last.date)} · ${last.practice ? 'Самостоятельная практика. Подтверждённые навыки не изменены.' : 'Активность сохранена в истории.'}</p></div><button class="secondary" data-route-panel="history">Посмотреть историю</button></article>`;
 }
 function render() {
   const e = state.employees.find(employee => employee.id === selected);
@@ -97,6 +106,7 @@ function render() {
       <div class="readiness"><div><strong>${coverage(e)}</strong><span>Покрытие требований</span></div><progress aria-label="Покрытие требований" max="100" value="${e.readiness ?? 0}"></progress><small>${e.next_grade ? `${e.gaps.filter(g => !g.gap).length} из ${e.gaps.length} требований выполнено` : 'Обсудите следующую цель с HR'}</small></div>
     </article>
     ${activeTask(e)}
+    ${completedTask(e)}
     <nav class="subnav" aria-label="Разделы маршрута">
       <button data-route-panel="recommendations" aria-controls="route-recommendations" aria-pressed="true">Рекомендации</button>
       <button data-route-panel="choices" aria-controls="route-choices" aria-pressed="false">Выбрать задачу</button>
@@ -121,7 +131,7 @@ function render() {
     </div>
     <div id="route-history" class="panel-body" hidden>
       <article class="panel"><div class="section-heading"><h3>История участия</h3><span>${history.length} записей</span></div><p class="muted">Сначала последние события.</p><div class="history-list scroll-panel">${history.length ? history.map(h => { const status = h.status || 'completed'; return `<div class="history-item"><div><b>${escape(state.activities.find(a => a.id === h.activity_id)?.name || h.activity_id)}</b><span class="status ${['completed', 'in_progress'].includes(status) ? status : ''}">${escape(statusName(status))}</span></div><time datetime="${escape(h.completed_at)}">${dateLabel(h.completed_at)}</time></div>`; }).join('') : '<p class="muted">История пока пуста. Здесь появятся ваши активности.</p>'}</div></article>
-      ${e.practice?.completed.length ? `<article class="panel practice-history"><h3>Самостоятельная практика · ${e.practice.completed.length}</h3><p class="muted">Результаты самооценки. Уровни навыков автоматически не начисляются.</p><div class="history-list scroll-panel">${e.practice.completed.slice().reverse().map(item => `<details class="compact-details"><summary>${escape(item.task.title)} · ${dateLabel(item.completed_at)}</summary><p class="reflection">${escape(item.reflection)}</p></details>`).join('')}</div></article>` : ''}
+      ${e.practice?.completed.length ? `<article class="panel practice-history"><h3>Самостоятельная практика · ${e.practice.completed.length}</h3><p class="muted">Выполненные задания. Уровни навыков автоматически не начисляются.</p><div class="history-list scroll-panel">${e.practice.completed.slice().reverse().map(item => `<details class="compact-details"><summary><span class="status completed">✓ Выполнено</span> ${escape(item.task.title)} · ${dateLabel(item.completed_at)}</summary>${item.reflection ? `<p class="reflection">${escape(item.reflection)}</p>` : `<p class="muted">Этап ${item.task.phase} из 3 · ${escape(item.task.skill_name)}</p>`}</details>`).join('')}</div></article>` : ''}
     </div>`;
   if (!choiceGaps.some(g => g.skill === taskSkill)) taskSkill = '';
   $('task-skill-filter').value = taskSkill;
@@ -219,9 +229,9 @@ document.addEventListener('submit', async event => {
   const button = form.querySelector('button');
   button.disabled = true;
   try {
-    await api('/api/practice/complete', { employee_id: selected, task_id: form.dataset.taskId, reflection: form.elements.reflection.value });
+    await api('/api/practice/complete', { employee_id: selected, task_id: form.dataset.taskId });
     await refresh();
-    notice('Результат практики сохранён. Следующие задания уже подобраны; подтверждённые уровни навыков не изменились.');
+    notice('✓ Задание выполнено! Следующие задания уже подобраны.');
   } catch (error) { notice(error.message, true); button.disabled = false; }
 });
 $('import-button').onclick = async () => {
