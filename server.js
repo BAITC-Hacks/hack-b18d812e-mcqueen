@@ -6,7 +6,6 @@ const os = require('node:os');
 const crypto = require('node:crypto');
 const { validateDataset, dashboard, completeActivity, hrSummary, chooseTask } = require('./lib/domain');
 const { loadDirectory, normalize, mergeProfiles } = require('./lib/dataset');
-const { completePractice } = require('./lib/practice');
 const assets = { '/': ['index.html', 'text/html; charset=utf-8'], '/app.js': ['app.js', 'text/javascript; charset=utf-8'], '/style.css': ['style.css', 'text/css; charset=utf-8'] };
 const defaultStorage = () => path.join(os.tmpdir(), 'career-quest-' + crypto.createHash('sha256').update(__dirname).digest('hex').slice(0, 12));
 function createApp(options = {}) {
@@ -110,11 +109,7 @@ function createApp(options = {}) {
         save(next); return send(200, { ok: true });
       }
       if (req.method === 'POST' && url.pathname === '/api/practice/complete') {
-        if (!isHR && input.employee_id !== session.employeeId) return send(403, { error: 'Нет доступа к другому сотруднику.' });
-        const employee = snapshot().employees.find(e => e.id === input.employee_id);
-        const next = structuredClone(state);
-        const completion = completePractice(next, employee, input.task_id, input.reflection);
-        save(next); return send(200, { completed: completion.task.id, skill_levels_changed: false });
+        return send(410, { error: 'Шаблонные практические задания больше не используются. Обновите страницу и выберите шаг развития из каталога.' });
       }
       if (!isHR) return send(403, { error: 'Доступно только HR.' });
       if (req.method === 'POST' && url.pathname === '/api/access') {
@@ -130,7 +125,8 @@ function createApp(options = {}) {
         if (input.mode === 'profiles') next = mergeProfiles(state, input);
         else if (input.events && input.skills && input.employees) next = normalize(input);
         else next = validateDataset(input);
-        // Practice is local app progress, never trusted as part of uploaded data.
+        // Keep existing legacy records on profile imports, but never accept
+        // client-provided practice credits or selected steps as imported progress.
         if (input.mode === 'profiles') {
           const incoming = Array.isArray(input.employees) ? input.employees : input.employees.employees;
           const replaced = new Set(incoming.map(e => e.employee_id));

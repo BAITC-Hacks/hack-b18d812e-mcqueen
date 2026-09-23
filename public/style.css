@@ -341,36 +341,27 @@ footer { max-width: 1288px; margin: auto; padding: 28px 32px 30px; font-size: 11
 @media (max-width: 480px) { .growth-goal { padding: 17px; } }
 
 
-/* Personal task choice and locally adapted practice. */
+/* Selected development steps and achieved goals. */
 .active-task { margin-top: 20px; border: 1px solid #aec680; border-left: 4px solid #78954b; scroll-margin-top: 20px; }
 .active-task .eyebrow { margin-bottom: 8px; }
 .active-task h3 { margin-bottom: 0; }
 .active-task .section-heading { margin: 0 0 18px; }
 .active-task .section-heading button { flex-shrink: 0; }
-#practice-form { display: grid; gap: 10px; margin-top: 18px; }
-#practice-form button { justify-self: start; }
-textarea { width: 100%; min-height: 100px; resize: vertical; padding: 12px; border: 1px solid #cbd5ca; border-radius: 9px; background: #fff; font: inherit; color: var(--ink); }
-textarea:focus-visible { outline: 3px solid #95af55; outline-offset: 3px; }
 .task-filter { width: min(100%, 320px); flex-shrink: 0; }
 .task-filter label { display: block; margin-bottom: 7px; }
-.task-steps { padding-left: 20px; font-size: 13px; line-height: 1.65; }
-.task-steps li + li { margin-top: 10px; }
-.practice-card { border-style: dashed; }
-.practice-history { margin-top: 20px; }
-.reflection { white-space: pre-wrap; overflow-wrap: anywhere; }
 .completed-task { display: flex; align-items: center; gap: 16px; margin-top: 20px; padding: 20px; background: #f0f7ee; border: 1px solid #bad4b1; border-radius: 14px; }
 .completion-check { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; background: #d9edcf; color: #285426; border-radius: 50%; font-size: 24px; }
 .completed-task > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .completed-task h3 { margin: 8px 0; }
 .completed-task p { margin-bottom: 0; }
 .completed-task button { flex-shrink: 0; }
-.practice-progress { display: flex; align-items: center; gap: 24px; margin-top: 16px; padding: 16px 20px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
-.practice-progress > div { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-.practice-progress strong { font-size: 28px; color: #285426; }
-.practice-progress span { max-width: 170px; font-size: 13px; font-weight: 600; }
-.practice-progress p { flex: 1; margin: 0; font-size: 12px; color: var(--muted); line-height: 1.6; }
-.practice-progress button { flex-shrink: 0; }
-@media (max-width: 760px) { .practice-progress { flex-wrap: wrap; gap: 12px; } .practice-progress p { flex-basis: 100%; } .practice-progress button { width: 100%; } }
+.step-progress { display: flex; align-items: center; gap: 24px; margin-top: 16px; padding: 16px 20px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.step-progress > div { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.step-progress strong { font-size: 28px; color: #285426; }
+.step-progress span { max-width: 170px; font-size: 13px; font-weight: 600; }
+.step-progress p { flex: 1; margin: 0; font-size: 12px; color: var(--muted); line-height: 1.6; }
+.step-progress button { flex-shrink: 0; }
+@media (max-width: 760px) { .step-progress { flex-wrap: wrap; gap: 12px; } .step-progress p { flex-basis: 100%; } .step-progress button { width: 100%; } }
 @media (max-width: 600px) { .completed-task { flex-wrap: wrap; } .completed-task button { width: 100%; } }
 @media (max-width: 760px) {
   .task-filter { width: 100%; }
@@ -378,5 +369,9 @@ textarea:focus-visible { outline: 3px solid #95af55; outline-offset: 3px; }
 }
 @media (max-width: 480px) {
   .active-task .section-heading { align-items: flex-start; }
-  #practice-form button { width: 100%; }
 }
+
+.achieved-goals { margin-top: 20px; padding: 16px 20px; border-radius: 12px; background: #f0f5e7; }
+.achieved-goals p { margin: 0 0 8px; line-height: 1.8; }
+.achieved-goals span { display: inline-block; margin-left: 8px; color: #285426; }
+.achieved-goals small { color: var(--muted); }
