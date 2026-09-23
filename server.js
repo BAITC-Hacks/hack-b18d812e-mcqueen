@@ -4,8 +4,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const crypto = require('node:crypto');
-const { validateDataset, dashboard, completeActivity, hrSummary } = require('./lib/domain');
+const { validateDataset, dashboard, completeActivity, hrSummary, chooseTask } = require('./lib/domain');
 const { loadDirectory, normalize, mergeProfiles } = require('./lib/dataset');
+const { completePractice } = require('./lib/practice');
 const assets = { '/': ['index.html', 'text/html; charset=utf-8'], '/app.js': ['app.js', 'text/javascript; charset=utf-8'], '/style.css': ['style.css', 'text/css; charset=utf-8'] };
 const defaultStorage = () => path.join(os.tmpdir(), 'career-quest-' + crypto.createHash('sha256').update(__dirname).digest('hex').slice(0, 12));
 function createApp(options = {}) {
@@ -90,6 +91,20 @@ function createApp(options = {}) {
         const changes = completeActivity(next, input.employee_id, input.activity_id);
         save(next); return send(200, { changes });
       }
+      if (req.method === 'POST' && url.pathname === '/api/plan') {
+        if (!isHR && input.employee_id !== session.employeeId) return send(403, { error: 'Нет доступа к другому сотруднику.' });
+        const employee = snapshot().employees.find(e => e.id === input.employee_id);
+        const next = structuredClone(state);
+        chooseTask(next, employee, input.source, input.task_id);
+        save(next); return send(200, { ok: true });
+      }
+      if (req.method === 'POST' && url.pathname === '/api/practice/complete') {
+        if (!isHR && input.employee_id !== session.employeeId) return send(403, { error: 'Нет доступа к другому сотруднику.' });
+        const employee = snapshot().employees.find(e => e.id === input.employee_id);
+        const next = structuredClone(state);
+        const completion = completePractice(next, employee, input.task_id, input.reflection);
+        save(next); return send(200, { completed: completion.task.id, skill_levels_changed: false });
+      }
       if (!isHR) return send(403, { error: 'Доступно только HR.' });
       if (req.method === 'POST' && url.pathname === '/api/access') {
         if (!state.employees.some(e => e.id === input.employee_id)) return send(400, { error: 'Сотрудник не найден.' });
@@ -104,6 +119,13 @@ function createApp(options = {}) {
         if (input.mode === 'profiles') next = mergeProfiles(state, input);
         else if (input.events && input.skills && input.employees) next = normalize(input);
         else next = validateDataset(input);
+        // Practice is local app progress, never trusted as part of uploaded data.
+        if (input.mode === 'profiles') {
+          const incoming = Array.isArray(input.employees) ? input.employees : input.employees.employees;
+          const replaced = new Set(incoming.map(e => e.employee_id));
+          next.practice_completions = (state.practice_completions || []).filter(item => !replaced.has(item.employee_id));
+          next.task_choices = (state.task_choices || []).filter(item => !replaced.has(item.employee_id));
+        } else { delete next.practice_completions; delete next.task_choices; }
         // Reject datasets that cannot produce a view before replacing saved state.
         dashboard(next);
         next._demo = false; save(next);

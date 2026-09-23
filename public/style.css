@@ -339,3 +339,30 @@ footer { max-width: 1288px; margin: auto; padding: 28px 32px 30px; font-size: 11
 .growth-gaps { display: flex; flex-wrap: wrap; gap: 8px; }
 .growth-gaps span { font-size: 12px; padding: 6px 10px; background: white; border-radius: 8px; }
 @media (max-width: 480px) { .growth-goal { padding: 17px; } }
+
+
+/* Personal task choice and locally adapted practice. */
+.active-task { margin-top: 20px; border: 1px solid #aec680; border-left: 4px solid #78954b; scroll-margin-top: 20px; }
+.active-task .eyebrow { margin-bottom: 8px; }
+.active-task h3 { margin-bottom: 0; }
+.active-task .section-heading { margin: 0 0 18px; }
+.active-task .section-heading button { flex-shrink: 0; }
+#practice-form { display: grid; gap: 10px; margin-top: 18px; }
+#practice-form button { justify-self: start; }
+textarea { width: 100%; min-height: 100px; resize: vertical; padding: 12px; border: 1px solid #cbd5ca; border-radius: 9px; background: #fff; font: inherit; color: var(--ink); }
+textarea:focus-visible { outline: 3px solid #95af55; outline-offset: 3px; }
+.task-filter { width: min(100%, 320px); flex-shrink: 0; }
+.task-filter label { display: block; margin-bottom: 7px; }
+.task-steps { padding-left: 20px; font-size: 13px; line-height: 1.65; }
+.task-steps li + li { margin-top: 10px; }
+.practice-card { border-style: dashed; }
+.practice-history { margin-top: 20px; }
+.reflection { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .task-filter { width: 100%; }
+  #route-choices > .section-heading { flex-direction: column; align-items: stretch; }
+}
+@media (max-width: 480px) {
+  .active-task .section-heading { align-items: flex-start; }
+  #practice-form button { width: 100%; }
+}

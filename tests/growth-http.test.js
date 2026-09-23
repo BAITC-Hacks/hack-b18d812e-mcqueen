@@ -117,10 +117,17 @@ test('HTTP development goals appear near completion, update after completion, an
   const accessResponse = await post('/api/access', { employee_id: 'demo-1' });
   assert.equal(accessResponse.status, 200);
   const credentials = await accessResponse.json();
-  const employeeCookie = await login(credentials);
+  let employeeCookie = await login(credentials);
   assert.deepEqual((await employee(employeeCookie)).development, view.development);
+  assert.equal((await post('/api/plan', { employee_id: 'demo-1', source: 'catalog', task_id: 'project' }, employeeCookie)).status, 200);
+  assert.equal((await employee(employeeCookie)).selected_task.task_id, 'project');
+  await stop();
+  await start();
+  employeeCookie = await login(credentials);
+  assert.equal((await employee(employeeCookie)).selected_task.task_id, 'project');
   await complete('project', employeeCookie);
   const afterProject = await employee(employeeCookie);
+  assert.equal(afterProject.selected_task, null);
   const next = seniorGoal(afterProject);
   assert.ok(next.readiness > beforeProject.readiness);
   assert.deepEqual(afterProject.skills, { python: 5, sql: 3, communication: 3 });

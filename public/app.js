@@ -4,6 +4,7 @@ let selected;
 let routePanel = 'recommendations';
 let hrPanel = 'overview';
 let teamPage = 0;
+let taskSkill = '';
 const pageSize = 12;
 const $ = id => document.getElementById(id);
 const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -39,16 +40,22 @@ async function refresh() {
   render();
   renderHR();
 }
+function chooseButton(source, id) {
+  const choice = state.employees.find(e => e.id === selected).selected_task;
+  const chosen = choice?.source === source && choice.task_id === id;
+  return `<button data-choose-source="${source}" data-choose-id="${escape(id)}" ${chosen ? 'disabled' : ''}>${chosen ? 'В вашем плане' : 'Выбрать задачу'}</button>`;
+}
 function recommendationCard(r, index) {
   const formats = { online: 'Онлайн', offline: 'Очно', self_paced: 'В своём темпе' };
   return `<article class="recommendation ${index === 0 ? 'recommended' : ''}">
     <div class="recommendation-top"><span class="rank">${index === 0 ? '01 · Первый шаг' : `0${index + 1} · Альтернатива`}</span>${r.activity.format ? `<span class="tag">${escape(formats[r.activity.format] || r.activity.format)}</span>` : ''}</div>
     <h3>${escape(r.activity.name)}</h3>
+    ${r.goal_label ? `<p class="muted">Дальнейшая цель: ${escape(r.goal_label)}</p>` : ''}
     <p class="description">${escape(r.activity.description || 'Активность для развития навыков целевого грейда.')}</p>
     <div class="impact-list">${r.reasons.map(reason => `<div class="impact-row"><div><span>${escape(reason.name)}</span><small>${reason.critical ? '★ Критичный навык · ' : ''}Цель: ${reason.required}</small></div><strong>${reason.before} → ${reason.after}</strong></div>`).join('')}</div>
     <p class="muted">Вероятность завершения: <b>${Math.round(r.behavior.probability * 100)}%</b><br><small>Прогноз модели, не гарантия результата.</small></p>
     <details class="explanation"><summary>Почему этот шаг</summary><p>${escape(r.explanation)}</p><div class="reason-notes">${r.reasons.map(reason => `<p><b>${escape(reason.name)}</b>: закроет ${reason.covered} ур. разрыва. Предел активности: ${reason.max_level}.</p>`).join('')}</div><p class="muted">Оценка приоритета: ${r.score}. Участие добровольное.</p></details>
-    <button data-complete="${escape(r.activity.id)}">Отметить завершение</button>
+    ${chooseButton('catalog', r.activity.id)}
   </article>`;
 }
 function developmentSection(employee) {
@@ -59,12 +66,29 @@ function developmentSection(employee) {
     ${plan.completed_goals?.length ? `<p class="muted">Требования уже выполнены: ${plan.completed_goals.map(g => escape(g.label || g.name)).join(', ')}.</p>` : ''}
     <div class="growth-goals">${plan.goals.map((goal, i) => `<article class="growth-goal"><div class="section-heading"><div><span class="rank">${goal.type === 'grade' ? 'КАРЬЕРНЫЙ ОРИЕНТИР' : 'РАЗВИТИЕ НАВЫКА'}</span><h3>${escape(goal.label || goal.name)}</h3></div><span class="tag">${goal.readiness == null ? '—' : goal.readiness + '%'} требований</span></div><p>${escape(goal.reason)}</p><div class="growth-gaps">${goal.gaps.filter(g => g.gap).map(g => `<span>${escape(g.name)}: ${g.current} → ${g.required}${g.critical ? ' ★' : ''}</span>`).join('')}</div><details ${plan.stage !== 'almost_complete' && i === 0 ? 'open' : ''}><summary>Активности для новой цели (${goal.recommendations.length})</summary><div class="recommendations">${goal.recommendations.map(recommendationCard).join('')}</div>${goal.recommendations.length ? '' : '<p class="muted">Пока нет доступных активностей. Обсудите подходящий следующий шаг с HR.</p>'}</details></article>`).join('') || `<article class="panel"><p>Подходящих новых целей в текущем каталоге пока нет. HR может добавить активности или согласовать новую траекторию.</p></article>`}</div><p class="muted">Новые цели предлагаются при выполнении от ${plan.threshold}% текущей цели или при отсутствии следующего грейда. Фактический грейд меняется только по решению компании.</p></section>`;
 }
+function practiceCard(task) {
+  return `<article class="recommendation practice-card"><div class="recommendation-top"><span class="rank">Самостоятельная практика</span><span class="tag">${task.minutes} мин.</span></div><h3>${escape(task.title)}</h3><p class="muted">${escape(task.skill_name)} · этап ${task.phase} из 3 · уровень ${task.current}, цель ${task.required}</p><ol class="task-steps">${task.steps.map(step => `<li>${escape(step)}</li>`).join('')}</ol><details class="explanation"><summary>Почему эта практика</summary>${task.reasons.map(reason => `<p>${escape(reason)}</p>`).join('')}</details>${chooseButton('practice', task.id)}</article>`;
+}
+function activeTask(e) {
+  const choice = e.selected_task;
+  if (!choice) return '';
+  const practice = choice.source === 'practice';
+  const task = practice ? e.practice.available_tasks.find(t => t.id === choice.task_id) : e.available_activities.find(r => r.activity.id === choice.task_id);
+  if (!task) return '';
+  return `<article class="active-task panel"><div class="section-heading"><div><p class="eyebrow">ВАШ ВЫБОР</p><h3>${escape(practice ? task.title : task.activity.name)}</h3></div><button class="secondary" data-clear-task>Убрать из плана</button></div>${practice ? `<ol class="task-steps">${task.steps.map(step => `<li>${escape(step)}</li>`).join('')}</ol><details class="compact-details"><summary>Как проверить результат</summary><ul>${task.checks.map(check => `<li>${escape(check)}</li>`).join('')}</ul></details><form id="practice-form" data-task-id="${escape(task.id)}"><label for="practice-result">Что получилось и как вы это проверили?</label><textarea id="practice-result" name="reflection" required minlength="20" maxlength="2000" rows="3" placeholder="Кратко опишите результат, проверку и оставшиеся вопросы…"></textarea><p class="muted">От 20 до 2000 символов. Самооценка сохраняется в истории практики; подтверждённый уровень навыка не меняется.</p><button>Сохранить результат практики</button></form>` : `<p>${escape(task.activity.description || '')}</p><p class="muted">${task.reasons.map(r => `${escape(r.name)}: ${r.before} → ${r.after}`).join(' · ')}</p><button data-complete="${escape(task.activity.id)}">Отметить завершение</button>`}</article>`;
+}
+function renderChoices(e) {
+  const catalog = (e.available_activities || e.recommendations).filter(r => !taskSkill || r.reasons.some(reason => reason.skill === taskSkill));
+  const practice = (e.practice?.available_tasks || []).filter(task => !taskSkill || task.skill === taskSkill);
+  $('choice-results').innerHTML = `<p class="muted" role="status">Из каталога: ${catalog.length} · Самостоятельная практика: ${practice.length}</p><div class="recommendations">${catalog.map(recommendationCard).join('')}${practice.map(practiceCard).join('') || ''}${!catalog.length && !practice.length ? '<article class="empty"><h3>Пока нет доступных задач</h3><p>Выберите другой навык или обсудите цель и каталог активностей с HR.</p></article>' : ''}</div>`;
+}
 function render() {
   const e = state.employees.find(employee => employee.id === selected);
   const ready = e.gaps.length > 0 && e.gaps.every(g => g.gap === 0);
   const initials = e.name.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('');
   const skills = Object.entries(e.skills).map(([id, value]) => ({ id, name: skillName(id), value })).sort(byName);
   const gaps = [...e.gaps].sort(byName);
+  const choiceGaps = [...new Map([...e.gaps, ...(e.development?.goals || []).flatMap(goal => goal.gaps)].filter(g => g.gap).map(g => [g.skill, g])).values()].sort(byName);
   const history = e.history.slice().sort((a, b) => Date.parse(b.completed_at) - Date.parse(a.completed_at));
   $('route').innerHTML = `
     <article class="profile-summary">
@@ -72,8 +96,10 @@ function render() {
       <div class="career-path"><div class="path-step"><small>Сейчас</small><strong>${escape(gradeName(e.grade))}</strong></div><span class="path-arrow" aria-hidden="true">→</span><div class="path-step"><small>${e.target_source === 'career_goal' ? 'Карьерная цель' : 'Следующий грейд'}</small><strong>${escape(targetName(e))}</strong></div></div>
       <div class="readiness"><div><strong>${coverage(e)}</strong><span>Покрытие требований</span></div><progress aria-label="Покрытие требований" max="100" value="${e.readiness ?? 0}"></progress><small>${e.next_grade ? `${e.gaps.filter(g => !g.gap).length} из ${e.gaps.length} требований выполнено` : 'Обсудите следующую цель с HR'}</small></div>
     </article>
+    ${activeTask(e)}
     <nav class="subnav" aria-label="Разделы маршрута">
       <button data-route-panel="recommendations" aria-controls="route-recommendations" aria-pressed="true">Рекомендации</button>
+      <button data-route-panel="choices" aria-controls="route-choices" aria-pressed="false">Выбрать задачу</button>
       <button data-route-panel="skills" aria-controls="route-skills" aria-pressed="false">Навыки</button>
       <button data-route-panel="history" aria-controls="route-history" aria-pressed="false">История <span class="tab-count">${e.history.length}</span></button>
     </nav>
@@ -82,7 +108,9 @@ function render() {
       <div class="recommendations">${e.recommendations.length ? e.recommendations.map(recommendationCard).join('') : `<article class="empty"><h3>${ready ? 'Требования выполнены' : 'Пока нет подходящего шага'}</h3><p>${!e.next_grade ? 'В наборе не задана следующая цель. Обсудите её с HR.' : ready ? 'Обсудите дальнейшее развитие и возможность повышения с HR.' : 'HR может дополнить каталог или проверить входные требования активностей.'}</p></article>`}</div>
       <p class="muted">Завершение активности обновляет навыки и рекомендации. Покрытие требований не означает автоматическое повышение.</p>
       ${developmentSection(e)}
+      ${e.practice?.tasks.length ? `<div class="section-heading"><div><h2>Практика без ожидания</h2><p class="muted">Доступных рекомендаций из каталога: ${e.recommendations.length}. Можно начать самостоятельную работу сейчас.</p></div><span class="tag">Автоподбор</span></div><p class="muted">Локальные шаблоны под вашу цель и дефициты. Практика не заменяет курс или подтверждение навыка.</p><div class="recommendations">${e.practice.tasks.map(practiceCard).join('')}</div>` : e.practice?.reason === 'practice_exhausted' ? '<article class="panel"><h3>Практика по текущим уровням пройдена</h3><p>Покажите результаты наставнику и обсудите новую оценку навыков. Выполненные задания не повторяются.</p></article>' : ''}
     </div>
+    <div id="route-choices" class="panel-body" hidden><div class="section-heading"><div><h2>Выберите свой следующий шаг</h2><p class="muted">Доступные задачи для текущей и дальнейших целей. Выбор можно изменить.</p></div><div class="task-filter"><label for="task-skill-filter">Какой навык улучшить?</label><select id="task-skill-filter"><option value="">Все навыки с разрывом</option>${choiceGaps.map(g => `<option value="${escape(g.skill)}">${escape(g.name)}</option>`).join('')}</select></div></div><div id="choice-results"></div></div>
     <div id="route-skills" class="panel-body" hidden>
       <div class="skills-layout">
         <article class="panel"><div class="section-heading"><h3>Требования к цели</h3><span>Текущий / нужный</span></div><p class="muted">По алфавиту. ★ — критичный навык.</p>
@@ -93,7 +121,12 @@ function render() {
     </div>
     <div id="route-history" class="panel-body" hidden>
       <article class="panel"><div class="section-heading"><h3>История участия</h3><span>${history.length} записей</span></div><p class="muted">Сначала последние события.</p><div class="history-list scroll-panel">${history.length ? history.map(h => { const status = h.status || 'completed'; return `<div class="history-item"><div><b>${escape(state.activities.find(a => a.id === h.activity_id)?.name || h.activity_id)}</b><span class="status ${['completed', 'in_progress'].includes(status) ? status : ''}">${escape(statusName(status))}</span></div><time datetime="${escape(h.completed_at)}">${dateLabel(h.completed_at)}</time></div>`; }).join('') : '<p class="muted">История пока пуста. Здесь появятся ваши активности.</p>'}</div></article>
+      ${e.practice?.completed.length ? `<article class="panel practice-history"><h3>Самостоятельная практика · ${e.practice.completed.length}</h3><p class="muted">Результаты самооценки. Уровни навыков автоматически не начисляются.</p><div class="history-list scroll-panel">${e.practice.completed.slice().reverse().map(item => `<details class="compact-details"><summary>${escape(item.task.title)} · ${dateLabel(item.completed_at)}</summary><p class="reflection">${escape(item.reflection)}</p></details>`).join('')}</div></article>` : ''}
     </div>`;
+  if (!choiceGaps.some(g => g.skill === taskSkill)) taskSkill = '';
+  $('task-skill-filter').value = taskSkill;
+  $('task-skill-filter').onchange = event => { taskSkill = event.target.value; renderChoices(e); };
+  renderChoices(e);
   setRoutePanel(routePanel);
 }
 function statusName(status) { return ({ completed: 'Завершено', in_progress: 'В процессе', dropped: 'Прекращено', no_show: 'Пропуск', declined: 'Отказ', overdue: 'Просрочено' })[status] || status; }
@@ -112,7 +145,7 @@ function renderHR() {
     </div>${h ? `<div class="hr-grid">
       <article class="panel"><div class="section-heading"><h3>Навыки, которым нужно внимание</h3><span>Топ-8</span></div><p class="muted">Количество сотрудников с разрывом до целевого уровня.</p><div class="bar-list">${h.deficits.slice(0, 8).map(s => `<div class="bar-row"><span>${escape(s.name)}</span><strong>${s.count}</strong><progress aria-label="${escape(s.name)}: ${s.count} сотрудников" max="${state.employees.length}" value="${s.count}"></progress></div>`).join('') || '<p class="muted">Разрывов нет.</p>'}</div>
       <details class="compact-details"><summary>Все дефициты (${h.deficits.length})</summary><div class="table-wrap scroll-panel"><table><thead><tr><th>Навык</th><th>Сотрудников</th></tr></thead><tbody>${[...h.deficits].sort(byName).map(s => `<tr><td>${escape(s.name)}</td><td>${s.count}</td></tr>`).join('')}</tbody></table></div></details></article>
-      <div><article class="panel"><div class="section-heading"><h3>Без рекомендованного шага</h3><span class="tag">${h.no_step.length}</span></div><p class="muted">Проверьте цель и доступность активностей.</p><details class="compact-details"><summary>Посмотреть сотрудников</summary>${attentionList(h.no_step)}</details></article>
+      <div><article class="panel"><div class="section-heading"><h3>Без шага из каталога</h3><span class="tag">${h.no_step.length}</span></div><p class="muted">Проверьте цель и доступность курсов. Самостоятельная практика учитывается отдельно.</p><details class="compact-details"><summary>Посмотреть сотрудников</summary>${attentionList(h.no_step)}</details></article>
       <article class="panel"><div class="section-heading"><h3>Без участия 90 дней</h3><span class="tag">${h.inactive.length}</span></div><p class="muted">Повод обсудить удобный формат развития.</p><details class="compact-details"><summary>Посмотреть сотрудников</summary>${attentionList(h.inactive)}</details></article></div>
     </div><article class="panel"><details class="compact-details"><summary>Участие по активностям (${h.participation.length})</summary><div class="table-wrap scroll-panel"><table><thead><tr><th>Активность</th><th>Записей</th><th>Статусы</th></tr></thead><tbody>${[...h.participation].sort(byName).map(a => `<tr><td>${escape(a.name)}</td><td>${a.total}</td><td>${Object.entries(a.counts).map(([k, v]) => `${escape(statusName(k))}: ${v}`).join('; ') || 'Нет участия'}</td></tr>`).join('')}</tbody></table></div></details></article>` : ''}
     <p class="muted">Покрытие — доля достигнутых уровней в требованиях цели. Повышение автоматически не назначается.</p>`;
@@ -132,7 +165,7 @@ function renderTeam() {
 function setRoutePanel(name) {
   routePanel = name;
   for (const button of document.querySelectorAll('[data-route-panel]')) button.setAttribute('aria-pressed', String(button.dataset.routePanel === name));
-  for (const key of ['recommendations', 'skills', 'history']) $(`route-${key}`).hidden = key !== name;
+  for (const key of ['recommendations', 'choices', 'skills', 'history']) $(`route-${key}`).hidden = key !== name;
 }
 function setHRPanel(name) {
   hrPanel = name;
@@ -145,7 +178,7 @@ function tab(hr) {
 }
 function selectEmployee(id) {
   notice(''); $('access-result').textContent = '';
-  selected = id; routePanel = 'recommendations';
+  selected = id; routePanel = 'recommendations'; taskSkill = '';
   $('employee-select').value = selected;
   render();
 }
@@ -160,6 +193,16 @@ document.addEventListener('click', async event => {
   if (button.dataset.hrPanel) setHRPanel(button.dataset.hrPanel);
   if (button.dataset.teamPage !== undefined) { teamPage = Number(button.dataset.teamPage); renderTeam(); }
   if (button.dataset.profile) { selectEmployee(button.dataset.profile); tab(false); $('employee-select').focus(); }
+  if (button.dataset.chooseId || button.hasAttribute('data-clear-task')) {
+    button.disabled = true;
+    try {
+      const clearing = button.hasAttribute('data-clear-task');
+      await api('/api/plan', { employee_id: selected, source: button.dataset.chooseSource, task_id: clearing ? null : button.dataset.chooseId });
+      await refresh();
+      notice(clearing ? 'Задача убрана из плана. Можно выбрать другую.' : 'Задача добавлена в ваш план. Выполните её и сохраните результат.');
+      if (!clearing) $('route').querySelector('.active-task')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    } catch (error) { notice(error.message, true); button.disabled = false; }
+  }
   if (button.dataset.complete) {
     button.disabled = true;
     try {
@@ -168,6 +211,18 @@ document.addEventListener('click', async event => {
       notice(`Завершение сохранено. ${result.changes.map(c => `${skillName(c.skill)}: ${c.before} → ${c.after}`).join('; ')}`);
     } catch (error) { notice(error.message, true); button.disabled = false; }
   }
+});
+document.addEventListener('submit', async event => {
+  if (event.target.id !== 'practice-form') return;
+  event.preventDefault();
+  const form = event.target;
+  const button = form.querySelector('button');
+  button.disabled = true;
+  try {
+    await api('/api/practice/complete', { employee_id: selected, task_id: form.dataset.taskId, reflection: form.elements.reflection.value });
+    await refresh();
+    notice('Результат практики сохранён. Следующие задания уже подобраны; подтверждённые уровни навыков не изменились.');
+  } catch (error) { notice(error.message, true); button.disabled = false; }
 });
 $('import-button').onclick = async () => {
   try {
@@ -188,7 +243,7 @@ $('reset-button').onclick = async () => {
   catch (error) { notice(error.message, true); }
 };
 function showLogin() {
-  state = null; selected = null; routePanel = 'recommendations'; hrPanel = 'overview'; teamPage = 0;
+  state = null; selected = null; routePanel = 'recommendations'; hrPanel = 'overview'; teamPage = 0; taskSkill = '';
   $('workspace').hidden = true; $('login-panel').hidden = false;
   for (const id of ['route', 'hr', 'team-table', 'data-notes', 'access-result', 'employee-select', 'mode']) $(id).textContent = '';
   $('team-search').value = '';

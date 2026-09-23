@@ -1,7 +1,7 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { developmentPlan, dashboard, completeActivity, recommend, validateDataset, hrSummary } = require('../lib/domain');
+const { developmentPlan, dashboard, completeActivity, recommend, validateDataset, hrSummary, chooseTask } = require('../lib/domain');
 const { normalize, mergeProfiles } = require('../lib/dataset');
 
 function fixture() {
@@ -261,4 +261,38 @@ test('empty requirements are already complete and the derived plan does not depe
   assert.equal(view.development.stage, 'completed');
   assert.equal(view.development.current_readiness, 100);
   assert.equal(view.development.goals[0].target.id, 'senior');
+});
+
+test('manual choice includes future-goal tasks beyond the top three without duplicating courses', () => {
+  const data = fixture();
+  const employee = data.employees[0];
+  employee.skills = { python: 3, sql: 3, communication: 2 };
+  let view = dashboard(data)[0];
+  assert.equal(view.recommendations.length, 0);
+  assert.ok(view.available_activities.length > 3);
+  assert.equal(new Set(view.available_activities.map(r => r.activity.id)).size, view.available_activities.length);
+  const topIds = new Set(view.development.goals.flatMap(g => g.recommendations.map(r => r.activity.id)));
+  const extra = view.available_activities.find(r => !topIds.has(r.activity.id));
+  assert.ok(extra);
+  chooseTask(data, view, 'catalog', extra.activity.id);
+  view = dashboard(data)[0];
+  assert.equal(view.selected_task.task_id, extra.activity.id);
+  completeActivity(data, employee.id, extra.activity.id);
+  view = dashboard(data)[0];
+  assert.equal(view.selected_task, null);
+  assert.ok(!view.available_activities.some(r => r.activity.id === extra.activity.id));
+  assert.equal(employee.grade, 'junior');
+});
+
+test('current recommendations stay unchanged when the same course also serves a future goal', () => {
+  const data = fixture();
+  data.employees[0].skills = { python: 3, sql: 2, communication: 2 };
+  const view = dashboard(data)[0];
+  assert.equal(view.development.stage, 'almost_complete');
+  assert.deepEqual(view.recommendations, recommend(data, data.employees[0]));
+  const current = view.recommendations.find(r => r.activity.id === 'sql-lab');
+  const chosen = view.available_activities.find(r => r.activity.id === 'sql-lab');
+  assert.deepEqual(chosen, current);
+  chooseTask(data, view, 'catalog', chosen.activity.id);
+  assert.equal(dashboard(data)[0].selected_task.task_id, chosen.activity.id);
 });
